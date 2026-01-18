@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+@theme {
+  /* Parisian Cafe Atmosphere */
+  --color-cafe-wall: #4A1C1C;
+  --color-cafe-wall-light: #5E2828;
+  --color-cafe-shadow: #1A0A0A;
+  --color-golden-light: #FFE4B5;
+  --color-golden-glow: rgba(255, 200, 120, 0.4);
+
+  /* Calacatta Marble - warm tones */
+  --color-marble-base: #FAF6F1;
+  --color-marble-warm: #F5EDE4;
+  --color-marble-vein-gold: #C9A962;
+  --color-marble-vein-gray: #9A8B7A;
+  --color-marble-vein-rust: #B8956A;
+
+  /* Brass Accents */
+  --color-brass: #C9A227;
+  --color-brass-dark: #8B7355;
+  --color-brass-shine: #E8D48A;
+
+  /* Cork - richer, warmer */
+  --color-cork: #C4A574;
+  --color-cork-dark: #9A7B52;
+  --color-cork-edge: #6B5234;
+  --color-cork-highlight: #D4BA8A;
+
+  /* Standing Zones - softer, more organic */
+  --color-zone-center: #7CB590;
+  --color-zone-inner: #B5C77A;
+  --color-zone-middle: #E8C547;
+  --color-zone-edge: #D4755A;
+  --color-zone-off: #5A4A4A;
+
+  /* Aged Paper */
+  --color-paper: #F4ECD8;
+  --color-paper-aged: #E8DCC4;
+  --color-paper-lines: #D4C4A8;
+  --color-ink: #2C1810;
+  --color-ink-faded: #5A4030;
+
+  /* Fonts */
+  --font-display: 'La Belle Aurore', cursive;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-handwritten: 'Caveat', cursive;
+  --font-typewriter: 'Special Elite', 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-serif);
+  background-color: var(--color-cafe-wall);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Display title - elegant French script */
+.title-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* Handwritten notes */
+.handwritten {
+  font-family: var(--font-handwritten);
+  font-weight: 500;
+}
+
+/* Typewriter style */
+.typewriter {
+  font-family: var(--font-typewriter);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* Elegant serif body */
+.serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
+
+/* Realistic object shadow on table */
+.table-object {
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.35))
+          drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Brass shimmer animation */
+@keyframes brassShimmer {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.brass-shimmer {
+  animation: brassShimmer 4s ease-in-out infinite;
+}
+
+/* Golden dust particles */
+@keyframes floatParticle {
+  0%, 100% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0;
+  }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  50% {
+    transform: translateY(-30px) translateX(10px) scale(1.2);
+  }
+}
+
+.dust-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: var(--color-golden-light);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: floatParticle 6s ease-in-out infinite;
+}
+
+/* Paper texture overlay */
+.paper-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Aged paper stains */
+.paper-aged::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 80% 20%, rgba(139, 90, 43, 0.08) 0%, transparent 40%),
+    radial-gradient(ellipse at 20% 80%, rgba(139, 90, 43, 0.06) 0%, transparent 30%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Cork realistic texture */
+.cork-texture {
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='cork'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='6' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23cork)'/%3E%3C/svg%3E");
+  background-blend-mode: overlay;
+}
+
+/* Zone label styling */
+.zone-label {
+  font-family: var(--font-serif);
+  font-style: italic;
+  letter-spacing: 0.05em;
+}
