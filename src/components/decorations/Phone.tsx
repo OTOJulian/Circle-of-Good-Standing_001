@@ -14,7 +14,58 @@ interface Song {
   explanation: string;
 }
 
-// Playlist data - add your explanations for each song!
+// Playlist intro text (shown when no song is hovered)
+const playlistIntro = `You asked me, "What's the full Mahnoor experience?", and I answered with a joke because this would have been a really long text. I had been adding songs to this playlist since Paris, every time I heard something that aligned with or reminded me my experience with you. I didn't think I'd ever send it to you, it was just something I could listen to when I wanted to revisit certain moments. Music is particularly good at that. But then I realized it was a pretty good answer to your question, and that I didn't have much to lose.`;
+
+// Split long explanations into pages
+const MAX_EXPLANATION_CHARS = 500;
+
+function splitExplanationIntoPages(text: string): string[] {
+  if (text.length <= MAX_EXPLANATION_CHARS) {
+    return [text];
+  }
+
+  const pages: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    if (remaining.length <= MAX_EXPLANATION_CHARS) {
+      pages.push(remaining);
+      break;
+    }
+
+    // Find a good break point (sentence end) within the limit
+    let breakPoint = MAX_EXPLANATION_CHARS;
+    const searchStart = Math.min(remaining.length, MAX_EXPLANATION_CHARS);
+    const searchEnd = Math.max(0, MAX_EXPLANATION_CHARS - 150);
+
+    // Look backwards from max chars to find sentence end
+    for (let i = searchStart; i >= searchEnd; i--) {
+      const char = remaining[i];
+      if ((char === '.' || char === '!' || char === '?') && remaining[i + 1] === ' ') {
+        breakPoint = i + 1;
+        break;
+      }
+    }
+
+    // If no sentence break found, look for word boundary
+    if (breakPoint === MAX_EXPLANATION_CHARS) {
+      for (let i = MAX_EXPLANATION_CHARS; i >= searchEnd; i--) {
+        if (remaining[i] === ' ') {
+          breakPoint = i;
+          break;
+        }
+      }
+    }
+
+    pages.push(remaining.slice(0, breakPoint).trim());
+    remaining = remaining.slice(breakPoint).trim();
+  }
+
+  return pages;
+}
+
+// Playlist data
 const playlist = {
   name: "The Full Mahnoor Experience",
   coverImage: "/assets/playlist_cover.JPG",
@@ -22,30 +73,30 @@ const playlist = {
   songs: [
     {
       id: "1",
+      title: "SkeeYee",
+      artist: "Sexyy Red",
+      albumArt: "https://i.scdn.co/image/ab67616d00001e0238f8e4adcb8668df34ce1660",
+      spotifyUrl: "https://open.spotify.com/track/7icwQvajsokotDfM3tefW6",
+      previewUrl: null,
+      explanation: "Hearing the story about how you broke your arm running to turn off Sexyy Red playing too loud in Oslo was a good introduction to how funny you are.",
+    },
+    {
+      id: "2",
       title: "I'll Try Anything Once",
       artist: "The Strokes",
       albumArt: "https://i.scdn.co/image/ab67616d00001e02f71abcb4d9ba0fbbc62fe867",
       spotifyUrl: "https://open.spotify.com/track/1L0C3xvOtzHSOSZ5T59n0L",
       previewUrl: "https://p.scdn.co/mp3-preview/4a8674088bbd981565c669550709dd1f28b9b02b",
-      explanation: "Add your explanation here...",
+      explanation: "The thought about whether or not to take the risk and meet you in Paris.",
     },
     {
-      id: "2",
+      id: "3",
       title: "The Way You Look Tonight",
       artist: "Tony Bennett",
       albumArt: "https://i.scdn.co/image/ab67616d00001e0231d261a19f6d40775ae820b5",
       spotifyUrl: "https://open.spotify.com/track/7yED4n2U8RR5LKZVmisiev",
       previewUrl: "https://p.scdn.co/mp3-preview/1a21a84edea3296cefd9ac1da2e79e33e66640b0",
-      explanation: "Add your explanation here...",
-    },
-    {
-      id: "3",
-      title: "Si tu vois ma mère",
-      artist: "The London Film Score Orchestra",
-      albumArt: "https://i.scdn.co/image/ab67616d00001e02e0ff38731ac198d052abd0a3",
-      spotifyUrl: "https://open.spotify.com/track/0e5GAZbEEWxnBZlxWzQ5sf",
-      previewUrl: "https://p.scdn.co/mp3-preview/c41d6cb7078450b1b59cc70c35771c9ac055781a",
-      explanation: "Add your explanation here...",
+      explanation: `The risk paying off. You very literally took my breath away the first moment I saw you walk out of that airbnb. Which is quite serious for an asthmatic. This song played in my head over and over as we walked through Paris after dinner. "Someday, when I'm awfully low, and the world is cold, I will feel a glow just thinking of you, and the way you looked tonight." I just didn't know that "someday" would come so soon.`,
     },
     {
       id: "4",
@@ -54,7 +105,7 @@ const playlist = {
       albumArt: "https://i.scdn.co/image/ab67616d00001e02608a63ad5b18e99da94a3f73",
       spotifyUrl: "https://open.spotify.com/track/0ESIjVxnDnCDaTPo6sStHm",
       previewUrl: "https://p.scdn.co/mp3-preview/8dd4bf57ce5b104be30c71cc8f407087d7aa0c44",
-      explanation: "Add your explanation here...",
+      explanation: "What played in my head when I shoved my face into a flower at the Bourdelle museum. Literally stopping to smell the roses. Something I know I wouldn't have done if you hadn't been there.",
     },
     {
       id: "5",
@@ -63,16 +114,16 @@ const playlist = {
       albumArt: "https://i.scdn.co/image/ab67616d00001e0215b62abc4b14254c4ad8621d",
       spotifyUrl: "https://open.spotify.com/track/476BGkZCAmmpw36sI4c5dt",
       previewUrl: "https://p.scdn.co/mp3-preview/b41ec3484604439aac401256142545c35040b02f",
-      explanation: "Add your explanation here...",
+      explanation: "I kept thinking how insane it was that you not only lived up to, but exceeded my expectations. You were warm, funny, brilliant, artistic, and beautiful in a way that (made Paris pale in comparison, made it so I barely noticed the monuments we were walking around) when we passed the Eiffel tower, you covered your eyes, I didn't even notice it.",
     },
     {
       id: "6",
       title: "Everything Happens To Me",
-      artist: "Mr Hudson",
+      artist: "Mr Hudson & The Library",
       albumArt: "https://i.scdn.co/image/ab67616d00001e028d0512ca6aca9d4fa6df317a",
       spotifyUrl: "https://open.spotify.com/track/1RraFTMSBiEbDjS3bX7FP6",
       previewUrl: "https://p.scdn.co/mp3-preview/a16b917f869ed5dc07cecc450d2d80867af436f4",
-      explanation: "Add your explanation here...",
+      explanation: "After the first night and second day, it felt like everything that could go wrong, did.",
     },
     {
       id: "7",
@@ -81,25 +132,25 @@ const playlist = {
       albumArt: "https://i.scdn.co/image/ab67616d00001e02a14b08b9a6616e121df5e8b0",
       spotifyUrl: "https://open.spotify.com/track/65qWooYTj0dq5HzoV6P9Kt",
       previewUrl: "https://p.scdn.co/mp3-preview/7043ac22cacaca658828da1b9068e05bd0fb2e57",
-      explanation: "Add your explanation here...",
+      explanation: "I wanted to blame it on everything but myself. But I ended up feeling insecure because I thought I was letting you down. This led me to say something stupid in a cafe I'd give anything to take back.",
     },
     {
       id: "8",
+      title: "What Are You Doing The Rest Of Your Life?",
+      artist: "Bill Evans",
+      albumArt: "https://i.scdn.co/image/ab67616d00001e021fb1655c7ebec963808be2f9",
+      spotifyUrl: "https://open.spotify.com/track/1NwwZ1VpCE1vxM28VayW86",
+      previewUrl: "https://p.scdn.co/mp3-preview/99505079325ffd3ac4bda8ce3e807e0112a0208d",
+      explanation: `When I told you turn around so I could give you the birthday list gifts, you said, "Are you proposing? Because if you are my answer is no".`,
+    },
+    {
+      id: "9",
       title: "I Know It's Over",
       artist: "The Smiths",
       albumArt: "https://i.scdn.co/image/ab67616d00001e02ada101c2e9e97feb8fae37a9",
       spotifyUrl: "https://open.spotify.com/track/3M2bD9SMYnJIPdrTKUnBd3",
       previewUrl: "https://p.scdn.co/mp3-preview/03d2a368be26cf839f3acc7258ab6b25eef81b94",
-      explanation: "Add your explanation here...",
-    },
-    {
-      id: "9",
-      title: "I Fall In Love Too Easily",
-      artist: "Chet Baker",
-      albumArt: "https://i.scdn.co/image/ab67616d00001e02309ae95ef92cb8b068e7ce52",
-      spotifyUrl: "https://open.spotify.com/track/0F845nujLVqCb0XMZCh5Pc",
-      previewUrl: "https://p.scdn.co/mp3-preview/c91c095210fc630663c4ad2f63a357519fc1c397",
-      explanation: "Add your explanation here...",
+      explanation: "The song that played on repeat I walked for hours around Paris the night you left. I was sure it was over. And it barely began.",
     },
     {
       id: "10",
@@ -108,7 +159,7 @@ const playlist = {
       albumArt: "https://i.scdn.co/image/ab67616d00001e020995328b6390f89b3eb2b27e",
       spotifyUrl: "https://open.spotify.com/track/5N7usY5OYD0sCTNiZZlyQn",
       previewUrl: "https://p.scdn.co/mp3-preview/d17f9845dc277c89e3cbb60b76bd2519c5df3038",
-      explanation: "Add your explanation here...",
+      explanation: "I thought I might never get to talk to you again, then a 7 hour call when I'm back in NY and you're back in Oslo. I'm in trouble now.",
     },
     {
       id: "11",
@@ -117,151 +168,133 @@ const playlist = {
       albumArt: "https://i.scdn.co/image/ab67616d00001e02fdd261528e3590ac36bb85f0",
       spotifyUrl: "https://open.spotify.com/track/675O3VntvhGApD7h4YQ89G",
       previewUrl: "https://p.scdn.co/mp3-preview/17ca653f58fe74e8464ebebddc0480a9e31d108b",
-      explanation: "Add your explanation here...",
+      explanation: "The elation of the call, leads directly to reality of the distance.",
     },
     {
       id: "12",
-      title: "What Are You Doing The Rest Of Your Life?",
-      artist: "Bill Evans",
-      albumArt: "https://i.scdn.co/image/ab67616d00001e021fb1655c7ebec963808be2f9",
-      spotifyUrl: "https://open.spotify.com/track/1NwwZ1VpCE1vxM28VayW86",
-      previewUrl: "https://p.scdn.co/mp3-preview/99505079325ffd3ac4bda8ce3e807e0112a0208d",
-      explanation: "Add your explanation here...",
-    },
-    {
-      id: "13",
       title: "If It's Magic",
       artist: "Stevie Wonder",
       albumArt: "https://i.scdn.co/image/ab67616d00001e022fee61bfec596bb6f5447c50",
       spotifyUrl: "https://open.spotify.com/track/4UBzGxrKBZN0NwJ8vTz8AG",
       previewUrl: "https://p.scdn.co/mp3-preview/09f3130d79645a4bbbb6b805fc71abd9e8356233",
-      explanation: "Add your explanation here...",
+      explanation: "But if it's magic, if it's as rare as I know it is, why can't it work out?",
     },
     {
-      id: "14",
-      title: "Is This Love",
-      artist: "Corinne Bailey Rae",
-      albumArt: "https://i.scdn.co/image/ab67616d00001e02e99107cbf556089592b73b50",
-      spotifyUrl: "https://open.spotify.com/track/5FvapYqWK6TEuh4csYwQ9O",
-      previewUrl: "https://p.scdn.co/mp3-preview/f4215af1a270e5173b7bd05faf173b2e6d74940c",
-      explanation: "Add your explanation here...",
-    },
-    {
-      id: "15",
-      title: "Who Knows",
-      artist: "Daniel Caesar",
-      albumArt: "https://i.scdn.co/image/ab67616d00001e022bad6e56e77d5bef0aa3f2dc",
-      spotifyUrl: "https://open.spotify.com/track/6DH13QYXK7lKkYHSU88N48",
-      previewUrl: "https://p.scdn.co/mp3-preview/695ea23e689a1816b09a8ac6f08749f0f5c38420",
-      explanation: "Add your explanation here...",
-    },
-    {
-      id: "16",
-      title: "True Love Waits",
-      artist: "Radiohead",
-      albumArt: "https://i.scdn.co/image/ab67616d00001e0205a2f9af5f0eaed4835acf54",
-      spotifyUrl: "https://open.spotify.com/track/62SvkbQm1wMS6KZtbtls1V",
-      previewUrl: "https://p.scdn.co/mp3-preview/f7fb2f0a7896f669e71f35a6fe7bafdd8e62f7b6",
-      explanation: "Add your explanation here...",
-    },
-    {
-      id: "17",
+      id: "13",
       title: "Calling All My Lovelies",
       artist: "Bruno Mars",
       albumArt: "https://i.scdn.co/image/ab67616d00001e02232711f7d66a1e19e89e28c5",
       spotifyUrl: "https://open.spotify.com/track/6ObpR8ek44tvWefQRcSo8K",
       previewUrl: "https://p.scdn.co/mp3-preview/eb7950f593437250a5ac974e9aca2452f92190ab",
-      explanation: "Add your explanation here...",
+      explanation: "Using a bruised ego to get over how often you don't answer calls.",
     },
     {
-      id: "18",
-      title: "On A Clear Day (You Can See Forever)",
-      artist: "Bill Evans",
-      albumArt: "https://i.scdn.co/image/ab67616d00001e02e750adc4de4ddcc28854c8dc",
-      spotifyUrl: "https://open.spotify.com/track/6yawvMbA9jLmDt6mjeEiNm",
-      previewUrl: "https://p.scdn.co/mp3-preview/13ebdcd3a55c1c5bfa68cacc28d5688326fbb08b",
-      explanation: "Add your explanation here...",
-    },
-    {
-      id: "19",
+      id: "14",
       title: "Tell Me Who You Are Today",
       artist: "Beth Gibbons",
       albumArt: "https://i.scdn.co/image/ab67616d00001e0216997b4a53ae6b42a4b803be",
       spotifyUrl: "https://open.spotify.com/track/1tB6SUQaXIUU4CprvNPwsT",
       previewUrl: "https://p.scdn.co/mp3-preview/095044ef5939704652dd2ff881c8287386581d27",
-      explanation: "Add your explanation here...",
+      explanation: "Sometimes an interaction with you can feel like a roll of the dice. I don't always know which version I'm going to get.",
     },
     {
-      id: "20",
+      id: "15",
       title: "I'm A Fool To Want You",
       artist: "Dexter Gordon",
       albumArt: "https://i.scdn.co/image/ab67616d00001e026d5755072aaf2dad1868b182",
       spotifyUrl: "https://open.spotify.com/track/4EaNQXQIuiBlQe5fe5fae6",
       previewUrl: "https://p.scdn.co/mp3-preview/3d35d8100d0b64ff26c7bbeaa306569e1f5a906e",
-      explanation: "Add your explanation here...",
+      explanation: "It can, at times, feel foolish to care this much about someone I have yet to kiss.",
     },
     {
-      id: "21",
-      title: "I Only Have Eyes for You",
-      artist: "The Flamingos",
-      albumArt: "https://i.scdn.co/image/ab67616d00001e02c915b018511be9560190b272",
-      spotifyUrl: "https://open.spotify.com/track/1jz8TlrPZR6oXROieCoc2v",
-      previewUrl: "https://p.scdn.co/mp3-preview/2c4dd05b0475d941124d127d125b30a5b4a872a7",
-      explanation: "Add your explanation here...",
-    },
-    {
-      id: "22",
+      id: "16",
       title: "Media Vuelta",
       artist: "Eydie Gormé, Los Panchos",
       albumArt: "https://i.scdn.co/image/ab67616d00001e021882bb790ff01387342c9750",
       spotifyUrl: "https://open.spotify.com/track/0LVLuqyQrXViI9OzDIVxbw",
       previewUrl: "https://p.scdn.co/mp3-preview/16712a09d202d8e178d3321fb4d44f4575ee7592",
-      explanation: "Add your explanation here...",
+      explanation: "You said once on our second call and again on our first dinner in Oslo, that it was good that I dated other people, so I could see that the grass isn't greener. A motto I would be forced to adopt when I saw the stories you posted with that guy in Berlin.",
     },
     {
-      id: "23",
+      id: "17",
       title: "Linger (Acoustic Version)",
       artist: "The Cranberries",
       albumArt: "https://i.scdn.co/image/ab67616d00001e02685628de68cfc204f3f8dbd5",
       spotifyUrl: "https://open.spotify.com/track/1nxebACXgKGhpB2DPs3qP0",
       previewUrl: "https://p.scdn.co/mp3-preview/4e1dac72be8b32eb170eeb984c69e7b7ce95371e",
-      explanation: "Add your explanation here...",
+      explanation: "Distracting myself doesn't seem to work. My brain is great finding tiny things that remind me of you.",
     },
     {
-      id: "24",
+      id: "18",
       title: "Time in a Bottle",
       artist: "Jim Croce",
       albumArt: "https://i.scdn.co/image/ab67616d00001e025b7a6cabbcb9fe150966563c",
       spotifyUrl: "https://open.spotify.com/track/7uWFUpGuEfmxYeymkV95jn",
       previewUrl: "https://p.scdn.co/mp3-preview/b5d8d825de94c965b3f20157bbbb3612fceaed47",
-      explanation: "Add your explanation here...",
+      explanation: `"There never seems to be enough time to do the things you want to do once you find them" I thought we'd have 3 nights together in Paris, we had 1. I thought we'd have one more night together in Oslo, you got sick. It's easy to not do or say something in a moment because you think you have more time, but you never have as much as you think.`,
     },
     {
-      id: "25",
+      id: "19",
       title: "Fool Me a Good Night",
       artist: "Labi Siffre",
       albumArt: "https://i.scdn.co/image/ab67616d00001e024f6f29e2eb6055e6451e042e",
       spotifyUrl: "https://open.spotify.com/track/344spUSRUifQy5VSAWw8OI",
       previewUrl: "https://p.scdn.co/mp3-preview/0cf1a59c59f70e0c4bfa14917638fd587f028a4c",
-      explanation: "Add your explanation here...",
+      explanation: "Hope 🤝🏽 Delusion",
     },
     {
-      id: "26",
-      title: "Regrets",
-      artist: "JAY-Z",
-      albumArt: "https://i.scdn.co/image/ab67616d00001e027a353e74db759af39d3f26b0",
-      spotifyUrl: "https://open.spotify.com/track/2G5VfBhThZMgDXHBh6EHah",
-      previewUrl: "https://p.scdn.co/mp3-preview/a26f978c24977b34066d706aa0c0cb6e8411e62e",
-      explanation: "Add your explanation here...",
-    },
-    {
-      id: "27",
+      id: "20",
       title: "Do You Ever Think Of Me?",
       artist: "Corinne Bailey Rae",
       albumArt: "https://i.scdn.co/image/ab67616d00001e024a90e81173a3a5ad2e63f1a5",
       spotifyUrl: "https://open.spotify.com/track/4dNcc0IbNYNPTfshVv941Z",
       previewUrl: "https://p.scdn.co/mp3-preview/4ca4dea645a62f01d41b1f256fef50284d81d487",
-      explanation: "Add your explanation here...",
+      explanation: "Wondering what's going on in your mind during some of these extended silences.",
+    },
+    {
+      id: "21",
+      title: "Come Back to Earth",
+      artist: "Mac Miller",
+      albumArt: "https://i.scdn.co/image/ab67616d00001e02175c577a61aa13d4fb4b6534",
+      spotifyUrl: "https://open.spotify.com/track/01z2fBGB8Hl3Jd3zXe4IXR",
+      previewUrl: null,
+      explanation: `The regrets have piled up over 8 months. I regret not kissing you on that first night in Paris. I regret saying that in the cafe. Not calling you sooner instead of waiting until I found the "right" party. Not texting you sooner my first night in Oslo. Calling you avoidant at that bar. Bringing up February on the phone during exams.`,
+    },
+    {
+      id: "22",
+      title: "Present Tense",
+      artist: "Radiohead",
+      albumArt: "https://i.scdn.co/image/ab67616d00001e0245643f5cf119cbc9d2811c22",
+      spotifyUrl: "https://open.spotify.com/track/7KHQtpLpoIV3Wfu22YQT8y",
+      previewUrl: null,
+      explanation: `I saw a clip of from the Last Dance of a guy on the Chicago Bulls staff talking about what made Michael Jordan so special. From his perspective, it wasn't that Michael was particularly more athletic or skilled than the other top players, but instead that he was the most present person you'd ever met. That was his superpower. For those 2 or 3 hours, the past and future, every shot he had taken or was going to take, didn't exist. He was perfectly in that moment, focused on that single shot. I thought about that for a while, considering if there were any moments in my life that I felt anything like that. The relationship to mindfulness is obvious, and surely I've felt echoes of this feeling during particularly focused moments of meditation. And the flow state I associate with athletes is something I've also felt in certain meetings or pitches where I knew I was at the top of my game. But when I scanned over the memories in the past year, something unexpected came up. All the moments I spent with you. It's not that I entered anything close to a flow state brought on by a great performance, quite the opposite actually, you remember how many times I put my foot in my mouth. But despite that, in all those moments with you, sitting across from you at a table, wandering Parisian streets we'd never seen, hearing your voice over the phone, I was completely, utterly, hopelessly, present. Present, in the sense that there wasn't anywhere I'd have rather been, or with anyone I'd have rather been with. Nothing was missing. (I let myself get in my head too much not wanting to ruin what felt like perfect moments. But you can't stay with your head in the clouds. You have to come back to earth.)`,
+    },
+    {
+      id: "23",
+      title: "Is This Love",
+      artist: "Corinne Bailey Rae",
+      albumArt: "https://i.scdn.co/image/ab67616d00001e02e99107cbf556089592b73b50",
+      spotifyUrl: "https://open.spotify.com/track/5FvapYqWK6TEuh4csYwQ9O",
+      previewUrl: "https://p.scdn.co/mp3-preview/f4215af1a270e5173b7bd05faf173b2e6d74940c",
+      explanation: "Definitions are difficult.",
+    },
+    {
+      id: "24",
+      title: "Who Knows",
+      artist: "Daniel Caesar",
+      albumArt: "https://i.scdn.co/image/ab67616d00001e022bad6e56e77d5bef0aa3f2dc",
+      spotifyUrl: "https://open.spotify.com/track/6DH13QYXK7lKkYHSU88N48",
+      previewUrl: "https://p.scdn.co/mp3-preview/695ea23e689a1816b09a8ac6f08749f0f5c38420",
+      explanation: "And outcomes are unpredictable.",
+    },
+    {
+      id: "25",
+      title: "True Love Waits (Live in Oslo)",
+      artist: "Radiohead",
+      albumArt: "https://i.scdn.co/image/ab67616d00001e0205a2f9af5f0eaed4835acf54",
+      spotifyUrl: "https://open.spotify.com/track/62SvkbQm1wMS6KZtbtls1V",
+      previewUrl: "https://p.scdn.co/mp3-preview/f7fb2f0a7896f669e71f35a6fe7bafdd8e62f7b6",
+      explanation: "But some things are worth the wait.",
     },
   ] as Song[],
 };
@@ -271,7 +304,13 @@ export function Phone({ isExpanded = false }: PhoneProps) {
   const [playingSongId, setPlayingSongId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [failedPreviews, setFailedPreviews] = useState<Set<string>>(new Set());
+  const [explanationPage, setExplanationPage] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Reset explanation page when hovered song changes
+  useEffect(() => {
+    setExplanationPage(0);
+  }, [hoveredSong?.id]);
 
   // Clean up audio when component unmounts or collapses
   useEffect(() => {
@@ -372,8 +411,11 @@ export function Phone({ isExpanded = false }: PhoneProps) {
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         }}
       >
-        {/* Playlist header with cover */}
-        <div className="flex items-center gap-4 mb-4 pb-4 border-b border-white/10">
+        {/* Playlist header with cover - hover to show intro */}
+        <div
+          className="flex items-center gap-4 mb-4 pb-4 border-b border-white/10 cursor-pointer"
+          onMouseEnter={() => setHoveredSong(null)}
+        >
           <img
             src={playlist.coverImage}
             alt={playlist.name}
@@ -401,7 +443,6 @@ export function Phone({ isExpanded = false }: PhoneProps) {
                   backgroundColor: isPlaying ? 'rgba(29, 185, 84, 0.2)' : isHovered ? 'rgba(255,255,255,0.1)' : 'transparent',
                 }}
                 onMouseEnter={() => setHoveredSong(song)}
-                onMouseLeave={() => setHoveredSong(null)}
                 onClick={(e) => handlePlayPause(song, e)}
               >
                 {/* Track number or play icon */}
@@ -508,7 +549,7 @@ export function Phone({ isExpanded = false }: PhoneProps) {
 
       {/* Explanation panel */}
       <div
-        className="rounded-xl p-6 flex flex-col justify-center"
+        className="rounded-xl p-6 flex flex-col justify-center relative"
         style={{
           backgroundColor: 'var(--color-paper)',
           width: '350px',
@@ -517,17 +558,46 @@ export function Phone({ isExpanded = false }: PhoneProps) {
         }}
       >
         {hoveredSong ? (
-          <div className="transition-opacity duration-200">
-            <p className="serif text-lg italic mb-3" style={{ color: 'var(--color-ink-faded)' }}>
-              "{hoveredSong.title}"
-            </p>
-            <p className="serif text-base leading-relaxed" style={{ color: 'var(--color-ink)' }}>
-              {hoveredSong.explanation}
-            </p>
-          </div>
+          (() => {
+            const pages = splitExplanationIntoPages(hoveredSong.explanation);
+            const totalPages = pages.length;
+            const currentPage = Math.min(explanationPage, totalPages - 1);
+
+            return (
+              <div className="transition-opacity duration-200 flex flex-col h-full">
+                <p className="serif text-lg italic mb-3" style={{ color: 'var(--color-ink-faded)' }}>
+                  "{hoveredSong.title}"
+                </p>
+                <p className="serif text-base leading-relaxed flex-1" style={{ color: 'var(--color-ink)' }}>
+                  {pages[currentPage]}
+                </p>
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-4 mt-4 pt-2">
+                    <button
+                      onClick={() => setExplanationPage(p => (p - 1 + totalPages) % totalPages)}
+                      className="text-sm px-2 py-1 rounded transition-colors"
+                      style={{ color: 'var(--color-ink-faded)' }}
+                    >
+                      &larr;
+                    </button>
+                    <span className="serif text-sm" style={{ color: 'var(--color-ink-faded)' }}>
+                      {currentPage + 1} / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setExplanationPage(p => (p + 1) % totalPages)}
+                      className="text-sm px-2 py-1 rounded transition-colors"
+                      style={{ color: 'var(--color-ink-faded)' }}
+                    >
+                      &rarr;
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()
         ) : (
-          <p className="serif text-xl text-center italic" style={{ color: 'var(--color-ink-faded)' }}>
-            hover over a song to see why it's special
+          <p className="serif text-base leading-relaxed" style={{ color: 'var(--color-ink)' }}>
+            {playlistIntro}
           </p>
         )}
       </div>
