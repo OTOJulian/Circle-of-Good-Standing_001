@@ -30,42 +30,108 @@ Thank you for being you.
 With all my love,
 Julian`;
 
+// ~700 chars per page - must split before visual overflow
+const MAX_CHARS_PER_PAGE = 700;
+
+// Split a long text block at sentence boundaries
+function splitAtSentences(text: string): string[] {
+  if (text.length <= MAX_CHARS_PER_PAGE) {
+    return [text];
+  }
+
+  const pages: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    if (remaining.length <= MAX_CHARS_PER_PAGE) {
+      pages.push(remaining.trim());
+      break;
+    }
+
+    // Find a good break point - look for sentence endings near the limit
+    let breakPoint = MAX_CHARS_PER_PAGE;
+
+    // Search backwards from the limit to find a sentence ending
+    const searchStart = Math.min(remaining.length, MAX_CHARS_PER_PAGE);
+    const searchEnd = Math.max(0, MAX_CHARS_PER_PAGE - 200); // Don't go too far back
+
+    let foundBreak = false;
+    for (let i = searchStart; i >= searchEnd; i--) {
+      const char = remaining[i];
+      // Look for sentence endings followed by space
+      if ((char === '.' || char === '!' || char === '?') &&
+          (i + 1 >= remaining.length || remaining[i + 1] === ' ' || remaining[i + 1] === '\n')) {
+        breakPoint = i + 1;
+        foundBreak = true;
+        break;
+      }
+    }
+
+    // If no sentence break found, try to break at a space
+    if (!foundBreak) {
+      for (let i = searchStart; i >= searchEnd; i--) {
+        if (remaining[i] === ' ') {
+          breakPoint = i;
+          foundBreak = true;
+          break;
+        }
+      }
+    }
+
+    // If still no break found, just hard break at the limit
+    if (!foundBreak) {
+      breakPoint = MAX_CHARS_PER_PAGE;
+    }
+
+    pages.push(remaining.slice(0, breakPoint).trim());
+    remaining = remaining.slice(breakPoint).trim();
+  }
+
+  return pages;
+}
+
 // Split content into pages by "---" delimiter or by character count
 function splitIntoPages(content: string): string[] {
   // First handle explicit '---' page breaks
   if (content.includes('---')) {
-    return content.split('---').map(page => page.trim()).filter(page => page.length > 0);
-  }
-
-  // Auto-split only if content is very long (over ~1200 chars per page)
-  // This represents roughly a full page of typewriter text
-  const MAX_CHARS_PER_PAGE = 1200;
-
-  if (content.length <= MAX_CHARS_PER_PAGE) {
-    return [content];
-  }
-
-  // Split at paragraph breaks for long content
-  const paragraphs = content.split('\n\n');
-  const pages: string[] = [];
-  let currentPage = '';
-
-  for (const para of paragraphs) {
-    const wouldExceed = currentPage.length + para.length + 2 > MAX_CHARS_PER_PAGE;
-
-    if (wouldExceed && currentPage.length > 0) {
-      pages.push(currentPage.trim());
-      currentPage = para;
-    } else {
-      currentPage += (currentPage ? '\n\n' : '') + para;
+    const explicitPages = content.split('---').map(page => page.trim()).filter(page => page.length > 0);
+    // Recursively split any explicit pages that are still too long
+    const result: string[] = [];
+    for (const page of explicitPages) {
+      result.push(...splitAtSentences(page));
     }
+    return result;
   }
 
-  if (currentPage.trim()) {
-    pages.push(currentPage.trim());
+  // For content without explicit breaks, first try paragraph splitting
+  const paragraphs = content.split('\n\n');
+
+  if (paragraphs.length > 1) {
+    // Has paragraph breaks - group paragraphs into pages
+    const pages: string[] = [];
+    let currentPage = '';
+
+    for (const para of paragraphs) {
+      const potentialPage = currentPage + (currentPage ? '\n\n' : '') + para;
+
+      if (potentialPage.length > MAX_CHARS_PER_PAGE && currentPage.length > 100) {
+        // Current page is substantial, push it and start new page with this para
+        pages.push(...splitAtSentences(currentPage.trim()));
+        currentPage = para;
+      } else {
+        currentPage = potentialPage;
+      }
+    }
+
+    if (currentPage.trim()) {
+      pages.push(...splitAtSentences(currentPage.trim()));
+    }
+
+    return pages.length > 0 ? pages : [content];
   }
 
-  return pages.length > 0 ? pages : [content];
+  // No paragraph breaks - split at sentences
+  return splitAtSentences(content);
 }
 
 function formatDate(date: Date): string {
@@ -425,6 +491,16 @@ export function Letter({ isExpanded, letters, onAddLetter }: LetterProps) {
                       >
                         {content}
                       </div>
+
+                      {/* Page indicator - minimal footprint */}
+                      {letterPages.length > 1 && isCurrentPage && (
+                        <p
+                          className="serif text-xs text-center mt-1"
+                          style={{ color: 'var(--color-ink-faded)', opacity: 0.6 }}
+                        >
+                          {index + 1} / {letterPages.length}
+                        </p>
+                      )}
                     </div>
                   </motion.div>
                 );

@@ -1,5 +1,34 @@
 # Circle of Good Standing - Development Progress
 
+## Session: January 18, 2026 (Continued)
+
+### Letter Page Splitting Fix (Completed)
+- **Problem**: Long letters without paragraph breaks weren't splitting correctly
+  - Text was cutting off mid-page with content lost between pages
+  - First line would appear alone on page 1, rest crammed into page 2
+- **Solution**: Rewrote `splitIntoPages()` with sentence-based splitting
+  - New `splitAtSentences()` function finds natural break points (., !, ?)
+  - Falls back to word boundaries if no sentence break found
+  - `MAX_CHARS_PER_PAGE` tuned to 700 characters (tested: 500, 600, 800, 950)
+- **Page Indicator**: Made more compact - just "1 / 4" with minimal spacing, no border
+
+### Phone/Playlist Audio Fix (Completed)
+- **Problem**: Some songs wouldn't play when clicking the play button
+  - Spotify preview URLs expire after days/weeks
+  - No error handling, so failed plays did nothing
+- **Solution**: Added graceful degradation for expired previews
+  - Track failed previews in `failedPreviews` state (Set)
+  - When audio fails to load/play, mark that song as failed
+  - Failed songs show Spotify icon instead of play button
+  - Clicking failed songs opens Spotify directly
+  - Working previews continue to play inline as before
+
+### Files Modified This Session
+- `src/components/letter/Letter.tsx` - New sentence-based page splitting, compact page indicator
+- `src/components/decorations/Phone.tsx` - Audio error handling, failed preview tracking
+
+---
+
 ## Session: January 17-18, 2026
 
 ### Letter System Overhaul
@@ -76,7 +105,7 @@
 ---
 
 ## Known Issues / Future Work
-- None currently identified
+- **Spotify Preview URLs**: Some have expired - songs 1, 2, 5 and possibly others show Spotify icon and open Spotify instead of playing inline. To fix permanently, would need to fetch fresh preview URLs from Spotify API.
 
 ## Notes
 - Edit mode = Mahnoor's link (can edit coaster position, birthday list, conditions)
