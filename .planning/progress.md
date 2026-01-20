@@ -30,7 +30,7 @@
 ### Long Explanation Pagination (Completed)
 - **Problem**: "Present Tense" explanation was too long and broke the layout
 - **Solution**: Added page splitting for long explanations
-  - `splitExplanationIntoPages()` function splits at ~500 chars
+  - `splitExplanationIntoPages()` function splits at ~750 chars
   - Breaks at sentence boundaries (., !, ?)
   - Navigation arrows (← →) and page indicator appear when needed
 
@@ -41,11 +41,28 @@
   - Move mouse away → stays on current song (allows page navigation)
   - Hover playlist header → returns to intro
 
+### Stacked Page Animation (Completed)
+- **Feature**: Added Letter-style stacked page visual for multi-page explanations
+- **Implementation**:
+  - Entire panel is the page (not nested cards inside)
+  - Pages stack behind with offset (4px) and rotation (0.8°)
+  - Framer Motion spring animation when navigating
+  - Click left side → previous page, click right side → next page
+  - Page edges visible peeking out at bottom-right like stacked paper
+
+### Updated Intro Text
+- Changed "answered" → "responded"
+- Added "reminded me of, my experience"
+- Changed to "revisit how I felt in certain moments"
+- Removed "and that I didn't have much to lose"
+
 ### Files Modified This Session
-- `src/components/decorations/Phone.tsx` - Complete playlist overhaul with explanations, pagination, sticky hover
+- `src/components/decorations/Phone.tsx` - Complete playlist overhaul with explanations, pagination, sticky hover, stacked pages
+- `test_assets/Playlist Copy.txt` - Source copy for playlist text
 
 ### Git
 - Commit: `576b043` - Add personal explanations to playlist songs
+- Commit: `0124c3e` - Update progress documentation for January 19 session
 
 ---
 

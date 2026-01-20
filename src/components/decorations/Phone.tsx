@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 interface PhoneProps {
   isExpanded?: boolean;
@@ -15,10 +16,10 @@ interface Song {
 }
 
 // Playlist intro text (shown when no song is hovered)
-const playlistIntro = `You asked me, "What's the full Mahnoor experience?", and I answered with a joke because this would have been a really long text. I had been adding songs to this playlist since Paris, every time I heard something that aligned with or reminded me my experience with you. I didn't think I'd ever send it to you, it was just something I could listen to when I wanted to revisit certain moments. Music is particularly good at that. But then I realized it was a pretty good answer to your question, and that I didn't have much to lose.`;
+const playlistIntro = `You asked me, "What's the full Mahnoor experience?", and I responded with a joke because this would have been a really long text. I had been adding songs to this playlist since Paris, every time I heard something that aligned with, or reminded me of, my experience with you. I didn't think I'd ever send it to you, it was just something I could listen to when I wanted to revisit how I felt in certain moments. Music is particularly good at that. But then I realized it was a pretty good answer to your question.`;
 
 // Split long explanations into pages
-const MAX_EXPLANATION_CHARS = 500;
+const MAX_EXPLANATION_CHARS = 750;
 
 function splitExplanationIntoPages(text: string): string[] {
   if (text.length <= MAX_EXPLANATION_CHARS) {
@@ -548,59 +549,109 @@ export function Phone({ isExpanded = false }: PhoneProps) {
       </div>
 
       {/* Explanation panel */}
-      <div
-        className="rounded-xl p-6 flex flex-col justify-center relative"
-        style={{
-          backgroundColor: 'var(--color-paper)',
-          width: '350px',
-          minHeight: '300px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-        }}
-      >
-        {hoveredSong ? (
-          (() => {
-            const pages = splitExplanationIntoPages(hoveredSong.explanation);
-            const totalPages = pages.length;
-            const currentPage = Math.min(explanationPage, totalPages - 1);
+      {hoveredSong ? (
+        (() => {
+          const pages = splitExplanationIntoPages(hoveredSong.explanation);
+          const totalPages = pages.length;
+          const currentPage = Math.min(explanationPage, totalPages - 1);
 
-            return (
-              <div className="transition-opacity duration-200 flex flex-col h-full">
-                <p className="serif text-lg italic mb-3" style={{ color: 'var(--color-ink-faded)' }}>
-                  "{hoveredSong.title}"
-                </p>
-                <p className="serif text-base leading-relaxed flex-1" style={{ color: 'var(--color-ink)' }}>
-                  {pages[currentPage]}
-                </p>
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-4 mt-4 pt-2">
-                    <button
-                      onClick={() => setExplanationPage(p => (p - 1 + totalPages) % totalPages)}
-                      className="text-sm px-2 py-1 rounded transition-colors"
-                      style={{ color: 'var(--color-ink-faded)' }}
-                    >
-                      &larr;
-                    </button>
-                    <span className="serif text-sm" style={{ color: 'var(--color-ink-faded)' }}>
-                      {currentPage + 1} / {totalPages}
-                    </span>
-                    <button
-                      onClick={() => setExplanationPage(p => (p + 1) % totalPages)}
-                      className="text-sm px-2 py-1 rounded transition-colors"
-                      style={{ color: 'var(--color-ink-faded)' }}
-                    >
-                      &rarr;
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })()
-        ) : (
+          return (
+            <div className="relative" style={{ width: '350px', height: '500px' }}>
+              {/* Stacked pages - each page is the full panel */}
+              {pages.map((content, index) => {
+                const isCurrentPage = index === currentPage;
+                const distanceFromCurrent = (index - currentPage + totalPages) % totalPages;
+                const offset = distanceFromCurrent * 4;
+                const rotation = distanceFromCurrent * 0.8;
+                const zIndex = totalPages - distanceFromCurrent;
+
+                return (
+                  <motion.div
+                    key={index}
+                    className={`absolute inset-0 rounded-xl p-6 flex flex-col ${totalPages > 1 ? 'cursor-pointer' : ''}`}
+                    style={{
+                      zIndex,
+                      backgroundColor: 'var(--color-paper)',
+                      boxShadow: isCurrentPage
+                        ? '0 8px 32px rgba(0,0,0,0.3)'
+                        : '0 4px 16px rgba(0,0,0,0.15)',
+                    }}
+                    animate={{
+                      x: offset,
+                      y: offset,
+                      rotate: rotation,
+                      scale: isCurrentPage ? 1 : 0.98,
+                    }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 300,
+                      damping: 30,
+                    }}
+                    onClick={(e) => {
+                      if (totalPages > 1 && isCurrentPage) {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        if (clickX < rect.width / 2) {
+                          setExplanationPage(p => (p - 1 + totalPages) % totalPages);
+                        } else {
+                          setExplanationPage(p => (p + 1) % totalPages);
+                        }
+                      }
+                    }}
+                  >
+                    {/* Only render content on current page */}
+                    {isCurrentPage && (
+                      <>
+                        <p className="serif text-lg italic mb-3" style={{ color: 'var(--color-ink-faded)' }}>
+                          "{hoveredSong.title}"
+                        </p>
+                        <p className="serif text-base leading-relaxed flex-1" style={{ color: 'var(--color-ink)' }}>
+                          {content}
+                        </p>
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-center gap-4 mt-4 pt-2">
+                            <button
+                              onClick={() => setExplanationPage(p => (p - 1 + totalPages) % totalPages)}
+                              className="text-sm px-2 py-1 rounded transition-colors"
+                              style={{ color: 'var(--color-ink-faded)' }}
+                            >
+                              &larr;
+                            </button>
+                            <span className="serif text-sm" style={{ color: 'var(--color-ink-faded)' }}>
+                              {currentPage + 1} / {totalPages}
+                            </span>
+                            <button
+                              onClick={() => setExplanationPage(p => (p + 1) % totalPages)}
+                              className="text-sm px-2 py-1 rounded transition-colors"
+                              style={{ color: 'var(--color-ink-faded)' }}
+                            >
+                              &rarr;
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          );
+        })()
+      ) : (
+        <div
+          className="rounded-xl p-6 flex flex-col justify-center"
+          style={{
+            backgroundColor: 'var(--color-paper)',
+            width: '350px',
+            minHeight: '300px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          }}
+        >
           <p className="serif text-base leading-relaxed" style={{ color: 'var(--color-ink)' }}>
             {playlistIntro}
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
