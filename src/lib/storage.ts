@@ -1,8 +1,20 @@
-import type { CircleInstance, Position, Condition, LetterEntry } from '../types';
+import type { CircleInstance, Position, LetterEntry } from '../types';
 import { nanoid } from 'nanoid';
 import { getZoneFromPosition } from './calculateZone';
+import { db } from './firebase';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  onSnapshot,
+} from 'firebase/firestore';
+import type { Unsubscribe } from 'firebase/firestore';
 
-const STORAGE_KEY = 'circle-of-good-standing';
+const COLLECTION_NAME = 'circles';
 
 // Generate tokens for sharing
 export function generateTokens() {
@@ -12,11 +24,66 @@ export function generateTokens() {
   };
 }
 
+// Helper to convert Firestore timestamps to Dates
+function convertTimestamps(data: any): any {
+  if (!data) return data;
+
+  const result = { ...data };
+
+  // Convert top-level dates
+  if (result.createdAt?.toDate) {
+    result.createdAt = result.createdAt.toDate();
+  } else if (result.createdAt) {
+    result.createdAt = new Date(result.createdAt);
+  }
+
+  // Convert currentPosition.updatedAt
+  if (result.currentPosition?.updatedAt?.toDate) {
+    result.currentPosition.updatedAt = result.currentPosition.updatedAt.toDate();
+  } else if (result.currentPosition?.updatedAt) {
+    result.currentPosition.updatedAt = new Date(result.currentPosition.updatedAt);
+  }
+
+  // Convert birthdayList dates
+  if (result.birthdayList) {
+    result.birthdayList = result.birthdayList.map((item: any) => ({
+      ...item,
+      addedAt: item.addedAt?.toDate ? item.addedAt.toDate() : new Date(item.addedAt),
+    }));
+  }
+
+  // Convert positionHistory dates
+  if (result.positionHistory) {
+    result.positionHistory = result.positionHistory.map((entry: any) => ({
+      ...entry,
+      timestamp: entry.timestamp?.toDate ? entry.timestamp.toDate() : new Date(entry.timestamp),
+    }));
+  }
+
+  // Convert letters dates
+  if (result.letters) {
+    result.letters = result.letters.map((letter: any) => ({
+      ...letter,
+      createdAt: letter.createdAt?.toDate ? letter.createdAt.toDate() : new Date(letter.createdAt),
+    }));
+  }
+
+  // Convert conditions dates
+  if (result.conditions) {
+    result.conditions = result.conditions.map((cond: any) => ({
+      ...cond,
+      addedAt: cond.addedAt?.toDate ? cond.addedAt.toDate() : new Date(cond.addedAt),
+    }));
+  }
+
+  return result as CircleInstance;
+}
+
 // Create a new circle instance
-export function createCircle(): CircleInstance {
+export async function createCircle(): Promise<CircleInstance> {
   const tokens = generateTokens();
   const now = new Date();
-  const initialDate = new Date('2025-06-28T16:11:00'); // June 28th, 2025 - 4:11 PM
+  const initialDate = new Date('2025-06-28T16:11:00');
 
   const circle: CircleInstance = {
     id: nanoid(),
@@ -24,7 +91,7 @@ export function createCircle(): CircleInstance {
     viewToken: tokens.viewToken,
     createdAt: now,
     currentPosition: {
-      x: 75, // Start at the edge, as per the story
+      x: 75,
       y: 50,
       zone: 'edge',
       updatedAt: initialDate,
@@ -45,84 +112,80 @@ export function createCircle(): CircleInstance {
         id: nanoid(),
         text: 'last six months',
         completed: true,
-        createdAt: initialDate,
+        addedAt: initialDate,
       },
     ],
   };
 
-  saveCircle(circle);
+  await saveCircle(circle);
   return circle;
 }
 
-// Save circle to localStorage
-export function saveCircle(circle: CircleInstance): void {
-  const circles = getAllCircles();
-  const index = circles.findIndex(c => c.id === circle.id);
-  if (index >= 0) {
-    circles[index] = circle;
-  } else {
-    circles.push(circle);
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(circles));
+// Save circle to Firestore
+export async function saveCircle(circle: CircleInstance): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, circle.id);
+  await setDoc(docRef, circle);
 }
 
-// Get all circles from localStorage
-export function getAllCircles(): CircleInstance[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return [];
-    const parsed = JSON.parse(data);
-    // Convert date strings back to Date objects and handle migration
-    return parsed.map((c: any) => ({
-      ...c,
-      createdAt: new Date(c.createdAt),
-      currentPosition: {
-        ...c.currentPosition,
-        updatedAt: new Date(c.currentPosition.updatedAt),
-      },
-      birthdayList: c.birthdayList.map((item: any) => ({
-        ...item,
-        addedAt: new Date(item.addedAt),
-      })),
-      positionHistory: c.positionHistory.map((entry: any) => ({
-        ...entry,
-        timestamp: new Date(entry.timestamp),
-      })),
-      // Migration: convert old letterContent to new letters array
-      letters: (c.letters || []).map((letter: any) => ({
-        ...letter,
-        createdAt: new Date(letter.createdAt),
-      })),
-      conditions: (c.conditions || []).map((cond: any) => ({
-        ...cond,
-        addedAt: new Date(cond.addedAt),
-      })),
-    }));
-  } catch {
-    return [];
+// Get circle by ID
+export async function getCircleById(id: string): Promise<CircleInstance | null> {
+  const docRef = doc(db, COLLECTION_NAME, id);
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    return convertTimestamps(docSnap.data());
   }
+  return null;
 }
 
 // Get circle by token (edit or view)
-export function getCircleByToken(token: string): { circle: CircleInstance; mode: 'edit' | 'view' } | null {
-  const circles = getAllCircles();
+export async function getCircleByToken(token: string): Promise<{ circle: CircleInstance; mode: 'edit' | 'view' } | null> {
+  // Try edit token first
+  const editQuery = query(
+    collection(db, COLLECTION_NAME),
+    where('editToken', '==', token)
+  );
+  const editSnapshot = await getDocs(editQuery);
 
-  for (const circle of circles) {
-    if (circle.editToken === token) {
-      return { circle, mode: 'edit' };
-    }
-    if (circle.viewToken === token) {
-      return { circle, mode: 'view' };
-    }
+  if (!editSnapshot.empty) {
+    const circle = convertTimestamps(editSnapshot.docs[0].data());
+    return { circle, mode: 'edit' };
+  }
+
+  // Try view token
+  const viewQuery = query(
+    collection(db, COLLECTION_NAME),
+    where('viewToken', '==', token)
+  );
+  const viewSnapshot = await getDocs(viewQuery);
+
+  if (!viewSnapshot.empty) {
+    const circle = convertTimestamps(viewSnapshot.docs[0].data());
+    return { circle, mode: 'view' };
   }
 
   return null;
 }
 
+// Subscribe to real-time updates for a circle
+export function subscribeToCircle(
+  circleId: string,
+  callback: (circle: CircleInstance | null) => void
+): Unsubscribe {
+  const docRef = doc(db, COLLECTION_NAME, circleId);
+
+  return onSnapshot(docRef, (docSnap) => {
+    if (docSnap.exists()) {
+      callback(convertTimestamps(docSnap.data()));
+    } else {
+      callback(null);
+    }
+  });
+}
+
 // Update position
-export function updatePosition(circleId: string, x: number, y: number, note?: string): CircleInstance | null {
-  const circles = getAllCircles();
-  const circle = circles.find(c => c.id === circleId);
+export async function updatePosition(circleId: string, x: number, y: number, note?: string): Promise<CircleInstance | null> {
+  const circle = await getCircleById(circleId);
   if (!circle) return null;
 
   const now = new Date();
@@ -135,7 +198,6 @@ export function updatePosition(circleId: string, x: number, y: number, note?: st
     note,
   };
 
-  // Add to history
   circle.positionHistory.unshift({
     id: nanoid(),
     position,
@@ -143,14 +205,13 @@ export function updatePosition(circleId: string, x: number, y: number, note?: st
     note,
   });
 
-  saveCircle(circle);
+  await saveCircle(circle);
   return circle;
 }
 
 // Add birthday list item
-export function addBirthdayItem(circleId: string, text: string): CircleInstance | null {
-  const circles = getAllCircles();
-  const circle = circles.find(c => c.id === circleId);
+export async function addBirthdayItem(circleId: string, text: string): Promise<CircleInstance | null> {
+  const circle = await getCircleById(circleId);
   if (!circle) return null;
 
   circle.birthdayList.push({
@@ -160,26 +221,24 @@ export function addBirthdayItem(circleId: string, text: string): CircleInstance 
     obtained: false,
   });
 
-  saveCircle(circle);
+  await saveCircle(circle);
   return circle;
 }
 
 // Remove birthday list item
-export function removeBirthdayItem(circleId: string, itemId: string): CircleInstance | null {
-  const circles = getAllCircles();
-  const circle = circles.find(c => c.id === circleId);
+export async function removeBirthdayItem(circleId: string, itemId: string): Promise<CircleInstance | null> {
+  const circle = await getCircleById(circleId);
   if (!circle) return null;
 
   circle.birthdayList = circle.birthdayList.filter(item => item.id !== itemId);
 
-  saveCircle(circle);
+  await saveCircle(circle);
   return circle;
 }
 
 // Toggle birthday item obtained status
-export function toggleBirthdayItem(circleId: string, itemId: string): CircleInstance | null {
-  const circles = getAllCircles();
-  const circle = circles.find(c => c.id === circleId);
+export async function toggleBirthdayItem(circleId: string, itemId: string): Promise<CircleInstance | null> {
+  const circle = await getCircleById(circleId);
   if (!circle) return null;
 
   const item = circle.birthdayList.find(i => i.id === itemId);
@@ -187,19 +246,18 @@ export function toggleBirthdayItem(circleId: string, itemId: string): CircleInst
     item.obtained = !item.obtained;
   }
 
-  saveCircle(circle);
+  await saveCircle(circle);
   return circle;
 }
 
 // Add a new letter
-export function addLetter(
+export async function addLetter(
   circleId: string,
   author: 'julian' | 'mahnoor',
   content: string,
   title?: string
-): CircleInstance | null {
-  const circles = getAllCircles();
-  const circle = circles.find(c => c.id === circleId);
+): Promise<CircleInstance | null> {
+  const circle = await getCircleById(circleId);
   if (!circle) return null;
 
   const newLetter: LetterEntry = {
@@ -210,16 +268,15 @@ export function addLetter(
     title,
   };
 
-  circle.letters.unshift(newLetter); // Add to beginning (newest first)
+  circle.letters.unshift(newLetter);
 
-  saveCircle(circle);
+  await saveCircle(circle);
   return circle;
 }
 
 // Add condition
-export function addCondition(circleId: string, text: string): CircleInstance | null {
-  const circles = getAllCircles();
-  const circle = circles.find(c => c.id === circleId);
+export async function addCondition(circleId: string, text: string): Promise<CircleInstance | null> {
+  const circle = await getCircleById(circleId);
   if (!circle) return null;
 
   circle.conditions.push({
@@ -229,26 +286,24 @@ export function addCondition(circleId: string, text: string): CircleInstance | n
     completed: false,
   });
 
-  saveCircle(circle);
+  await saveCircle(circle);
   return circle;
 }
 
 // Remove condition
-export function removeCondition(circleId: string, conditionId: string): CircleInstance | null {
-  const circles = getAllCircles();
-  const circle = circles.find(c => c.id === circleId);
+export async function removeCondition(circleId: string, conditionId: string): Promise<CircleInstance | null> {
+  const circle = await getCircleById(circleId);
   if (!circle) return null;
 
   circle.conditions = circle.conditions.filter(c => c.id !== conditionId);
 
-  saveCircle(circle);
+  await saveCircle(circle);
   return circle;
 }
 
 // Toggle condition completed status
-export function toggleCondition(circleId: string, conditionId: string): CircleInstance | null {
-  const circles = getAllCircles();
-  const circle = circles.find(c => c.id === circleId);
+export async function toggleCondition(circleId: string, conditionId: string): Promise<CircleInstance | null> {
+  const circle = await getCircleById(circleId);
   if (!circle) return null;
 
   const condition = circle.conditions.find(c => c.id === conditionId);
@@ -256,7 +311,7 @@ export function toggleCondition(circleId: string, conditionId: string): CircleIn
     condition.completed = !condition.completed;
   }
 
-  saveCircle(circle);
+  await saveCircle(circle);
   return circle;
 }
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { CircleInstance, AccessMode } from '../types';
 import {
   getCircleByToken,
+  subscribeToCircle,
   updatePosition,
   addBirthdayItem,
   removeBirthdayItem,
@@ -18,83 +19,106 @@ interface UseCircleResult {
   circle: CircleInstance | null;
   mode: AccessMode;
   isEditable: boolean;
-  updateMarkerPosition: (x: number, y: number, note?: string) => void;
-  addItem: (text: string) => void;
-  removeItem: (itemId: string) => void;
-  toggleItem: (itemId: string) => void;
-  addNewLetter: (author: 'julian' | 'mahnoor', content: string, title?: string) => void;
-  addConditionItem: (text: string) => void;
-  removeConditionItem: (conditionId: string) => void;
-  toggleConditionItem: (conditionId: string) => void;
+  isLoading: boolean;
+  updateMarkerPosition: (x: number, y: number, note?: string) => Promise<void>;
+  addItem: (text: string) => Promise<void>;
+  removeItem: (itemId: string) => Promise<void>;
+  toggleItem: (itemId: string) => Promise<void>;
+  addNewLetter: (author: 'julian' | 'mahnoor', content: string, title?: string) => Promise<void>;
+  addConditionItem: (text: string) => Promise<void>;
+  removeConditionItem: (conditionId: string) => Promise<void>;
+  toggleConditionItem: (conditionId: string) => Promise<void>;
   shareUrls: { editUrl: string; viewUrl: string } | null;
 }
 
 export function useCircle(token: string | undefined): UseCircleResult {
   const [circle, setCircle] = useState<CircleInstance | null>(null);
   const [mode, setMode] = useState<AccessMode>('loading');
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Initial load and real-time subscription
   useEffect(() => {
     if (!token) {
       setMode('not-found');
+      setIsLoading(false);
       return;
     }
 
-    const result = getCircleByToken(token);
-    if (result) {
-      setCircle(result.circle);
-      setMode(result.mode);
-    } else {
-      setMode('not-found');
+    let unsubscribe: (() => void) | null = null;
+
+    async function loadCircle() {
+      try {
+        const result = await getCircleByToken(token!);
+        if (result) {
+          setCircle(result.circle);
+          setMode(result.mode);
+
+          // Subscribe to real-time updates
+          unsubscribe = subscribeToCircle(result.circle.id, (updatedCircle) => {
+            if (updatedCircle) {
+              setCircle(updatedCircle);
+            }
+          });
+        } else {
+          setMode('not-found');
+        }
+      } catch (error) {
+        console.error('Error loading circle:', error);
+        setMode('not-found');
+      } finally {
+        setIsLoading(false);
+      }
     }
+
+    loadCircle();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [token]);
 
-  const updateMarkerPosition = useCallback((x: number, y: number, note?: string) => {
+  const updateMarkerPosition = useCallback(async (x: number, y: number, note?: string) => {
     if (!circle || mode !== 'edit') return;
-    const updated = updatePosition(circle.id, x, y, note);
-    if (updated) setCircle(updated);
+    await updatePosition(circle.id, x, y, note);
+    // Real-time subscription will update the state
   }, [circle, mode]);
 
-  const addItem = useCallback((text: string) => {
+  const addItem = useCallback(async (text: string) => {
     if (!circle || mode !== 'edit') return;
-    const updated = addBirthdayItem(circle.id, text);
-    if (updated) setCircle(updated);
+    await addBirthdayItem(circle.id, text);
   }, [circle, mode]);
 
-  const removeItem = useCallback((itemId: string) => {
+  const removeItem = useCallback(async (itemId: string) => {
     if (!circle || mode !== 'edit') return;
-    const updated = removeBirthdayItem(circle.id, itemId);
-    if (updated) setCircle(updated);
+    await removeBirthdayItem(circle.id, itemId);
   }, [circle, mode]);
 
-  const toggleItem = useCallback((itemId: string) => {
+  const toggleItem = useCallback(async (itemId: string) => {
     if (!circle || mode !== 'edit') return;
-    const updated = toggleBirthdayItem(circle.id, itemId);
-    if (updated) setCircle(updated);
+    await toggleBirthdayItem(circle.id, itemId);
   }, [circle, mode]);
 
   // Both edit and view modes can add letters
-  const addNewLetter = useCallback((author: 'julian' | 'mahnoor', content: string, title?: string) => {
+  const addNewLetter = useCallback(async (author: 'julian' | 'mahnoor', content: string, title?: string) => {
     if (!circle) return;
-    const updated = addLetter(circle.id, author, content, title);
-    if (updated) setCircle(updated);
+    await addLetter(circle.id, author, content, title);
   }, [circle]);
 
-  const addConditionItem = useCallback((text: string) => {
+  const addConditionItem = useCallback(async (text: string) => {
     if (!circle || mode !== 'edit') return;
-    const updated = addCondition(circle.id, text);
-    if (updated) setCircle(updated);
+    await addCondition(circle.id, text);
   }, [circle, mode]);
 
-  const removeConditionItem = useCallback((conditionId: string) => {
+  const removeConditionItem = useCallback(async (conditionId: string) => {
     if (!circle || mode !== 'edit') return;
-    const updated = removeCondition(circle.id, conditionId);
-    if (updated) setCircle(updated);
+    await removeCondition(circle.id, conditionId);
   }, [circle, mode]);
 
-  const toggleConditionItem = useCallback((conditionId: string) => {
+  const toggleConditionItem = useCallback(async (conditionId: string) => {
     if (!circle || mode !== 'edit') return;
-    const updated = toggleCondition(circle.id, conditionId);
-    if (updated) setCircle(updated);
+    await toggleCondition(circle.id, conditionId);
   }, [circle, mode]);
 
   const shareUrls = circle ? getShareUrls(circle) : null;
@@ -103,6 +127,7 @@ export function useCircle(token: string | undefined): UseCircleResult {
     circle,
     mode,
     isEditable: mode === 'edit',
+    isLoading,
     updateMarkerPosition,
     addItem,
     removeItem,
@@ -118,12 +143,18 @@ export function useCircle(token: string | undefined): UseCircleResult {
 // Hook for creating a new circle
 export function useCreateCircle() {
   const [circle, setCircle] = useState<CircleInstance | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
-  const create = useCallback(() => {
-    const newCircle = createCircle();
-    setCircle(newCircle);
-    return newCircle;
+  const create = useCallback(async () => {
+    setIsCreating(true);
+    try {
+      const newCircle = await createCircle();
+      setCircle(newCircle);
+      return newCircle;
+    } finally {
+      setIsCreating(false);
+    }
   }, []);
 
-  return { circle, create };
+  return { circle, create, isCreating };
 }
