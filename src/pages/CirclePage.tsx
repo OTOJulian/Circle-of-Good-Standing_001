@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { CafeTable } from '../components/layout/CafeTable';
 import { Coaster } from '../components/coaster/Coaster';
@@ -8,13 +7,11 @@ import { Letter } from '../components/letter/Letter';
 import { IceCreamAndFries } from '../components/decorations/IceCreamFries';
 import { Epok } from '../components/decorations/Epok';
 import { Phone } from '../components/decorations/Phone';
-import { useCircle } from '../hooks/useCircle';
+import { useSharedCircle } from '../hooks/useCircle';
 
 type ExpandedItem = 'coaster' | 'birthday' | 'letter' | 'snacks' | 'epok' | 'phone' | null;
 
 export function CirclePage() {
-  const { token } = useParams<{ token: string }>();
-  const navigate = useNavigate();
   const [expandedItem, setExpandedItem] = useState<ExpandedItem>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [showHint, setShowHint] = useState(true);
@@ -39,8 +36,8 @@ export function CirclePage() {
 
   const {
     circle,
-    mode,
-    isEditable,
+    isLoading,
+    error,
     updateMarkerPosition,
     addItem,
     removeItem,
@@ -49,17 +46,9 @@ export function CirclePage() {
     addConditionItem,
     removeConditionItem,
     toggleConditionItem,
-    shareUrls,
-  } = useCircle(token);
+  } = useSharedCircle();
 
-  // Auto-redirect to home (which creates a new table) when circle not found
-  useEffect(() => {
-    if (mode === 'not-found') {
-      navigate('/', { replace: true });
-    }
-  }, [mode, navigate]);
-
-  if (mode === 'loading' || mode === 'not-found') {
+  if (isLoading) {
     return (
       <CafeTable>
         <div className="flex items-center justify-center h-full">
@@ -76,15 +65,27 @@ export function CirclePage() {
     );
   }
 
-  // This shouldn't render, but safety fallback
-  if (!circle) {
-    return null;
+  if (error || !circle) {
+    return (
+      <CafeTable>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="title-display text-2xl mb-4" style={{ color: 'var(--color-paper)' }}>
+              Something went wrong
+            </p>
+            <p className="serif" style={{ color: 'var(--color-paper-aged)' }}>
+              {error || 'Could not load the circle'}
+            </p>
+          </div>
+        </div>
+      </CafeTable>
+    );
   }
 
   return (
     <CafeTable>
       <div className="h-full flex flex-col relative">
-        {/* Title */}
+        {/* Title - hidden */}
         <motion.header
           className="text-center mb-4 md:mb-6 opacity-0"
           initial={{ opacity: 0 }}
@@ -93,20 +94,6 @@ export function CirclePage() {
           <h1 className="title-display text-xl md:text-2xl" style={{ color: 'var(--color-ink)' }}>
             Circle of Good Standing
           </h1>
-          <div className="flex items-center justify-center gap-2 mt-1">
-            <span className="serif text-xs italic" style={{ color: 'var(--color-ink-faded)' }}>
-              — Mahnoor's judgement —
-            </span>
-            <span
-              className="px-2 py-0.5 rounded text-xs serif"
-              style={{
-                backgroundColor: isEditable ? 'var(--color-zone-center)' : 'var(--color-paper-aged)',
-                color: 'var(--color-ink)',
-              }}
-            >
-              {isEditable ? 'editing' : 'viewing'}
-            </span>
-          </div>
         </motion.header>
 
         {/* Table surface with all items */}
@@ -210,7 +197,7 @@ export function CirclePage() {
             >
               <Coaster
                 position={circle.currentPosition}
-                isEditable={isEditable && expandedItem === 'coaster'}
+                isEditable={expandedItem === 'coaster'}
                 onPositionChange={updateMarkerPosition}
                 isExpanded={expandedItem === 'coaster'}
                 positionHistory={circle.positionHistory}
@@ -252,7 +239,7 @@ export function CirclePage() {
             >
               <BirthdayList
                 items={circle.birthdayList}
-                isEditable={isEditable && expandedItem === 'birthday'}
+                isEditable={expandedItem === 'birthday'}
                 isExpanded={expandedItem === 'birthday'}
                 onAdd={addItem}
                 onRemove={removeItem}
@@ -471,78 +458,6 @@ export function CirclePage() {
 
           </div>
         </div>
-
-        {/* Share URLs - fixed bottom left */}
-        <AnimatePresence>
-          {isEditable && shareUrls && !expandedItem && (
-            <motion.div
-              className="fixed bottom-4 left-4 p-4 rounded-lg max-w-xs z-20"
-              style={{
-                backgroundColor: 'var(--color-paper)',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-              }}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <h3 className="title-display text-lg mb-3 text-center" style={{ color: 'var(--color-ink)' }}>
-                share the table
-              </h3>
-              <div className="space-y-3 text-xs">
-                <div>
-                  <label className="serif block mb-1" style={{ color: 'var(--color-ink-faded)' }}>
-                    your private link:
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={shareUrls.editUrl}
-                      className="flex-grow px-2 py-1.5 rounded serif truncate"
-                      style={{
-                        backgroundColor: 'rgba(255,255,255,0.7)',
-                        color: 'var(--color-ink)',
-                        border: '1px solid var(--color-paper-lines)',
-                      }}
-                    />
-                    <button
-                      onClick={() => navigator.clipboard.writeText(shareUrls.editUrl)}
-                      className="px-3 py-1.5 rounded serif"
-                      style={{ backgroundColor: 'var(--color-brass)', color: 'var(--color-cafe-shadow)' }}
-                    >
-                      copy
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="serif block mb-1" style={{ color: 'var(--color-ink-faded)' }}>
-                    Julian's link:
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={shareUrls.viewUrl}
-                      className="flex-grow px-2 py-1.5 rounded serif truncate"
-                      style={{
-                        backgroundColor: 'rgba(255,255,255,0.7)',
-                        color: 'var(--color-ink)',
-                        border: '1px solid var(--color-paper-lines)',
-                      }}
-                    />
-                    <button
-                      onClick={() => navigator.clipboard.writeText(shareUrls.viewUrl)}
-                      className="px-3 py-1.5 rounded serif"
-                      style={{ backgroundColor: 'var(--color-brass)', color: 'var(--color-cafe-shadow)' }}
-                    >
-                      copy
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Footer */}
         <motion.footer
