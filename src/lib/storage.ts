@@ -6,6 +6,10 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  runTransaction,
   collection,
   query,
   where,
@@ -183,83 +187,94 @@ export function subscribeToCircle(
   });
 }
 
-// Update position
-export async function updatePosition(circleId: string, x: number, y: number, note?: string): Promise<CircleInstance | null> {
-  const circle = await getCircleById(circleId);
-  if (!circle) return null;
-
+// Update position (atomic with transaction)
+export async function updatePosition(circleId: string, x: number, y: number, note?: string): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, circleId);
   const now = new Date();
   const zone = getZoneFromPosition(x, y);
   const position: Position = { x, y, zone };
 
-  circle.currentPosition = {
-    ...position,
-    updatedAt: now,
-    note,
-  };
-
-  circle.positionHistory.unshift({
+  const newHistoryEntry = {
     id: nanoid(),
     position,
     timestamp: now,
     note,
+  };
+
+  await runTransaction(db, async (transaction) => {
+    const docSnap = await transaction.get(docRef);
+    if (!docSnap.exists()) {
+      throw new Error('Circle not found');
+    }
+    const data = docSnap.data();
+    const updatedHistory = [newHistoryEntry, ...(data.positionHistory || [])];
+
+    transaction.update(docRef, {
+      currentPosition: {
+        ...position,
+        updatedAt: now,
+        note,
+      },
+      positionHistory: updatedHistory,
+    });
   });
-
-  await saveCircle(circle);
-  return circle;
 }
 
-// Add birthday list item
-export async function addBirthdayItem(circleId: string, text: string): Promise<CircleInstance | null> {
-  const circle = await getCircleById(circleId);
-  if (!circle) return null;
-
-  circle.birthdayList.push({
-    id: nanoid(),
-    text,
-    addedAt: new Date(),
-    obtained: false,
+// Add birthday list item (atomic)
+export async function addBirthdayItem(circleId: string, text: string): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, circleId);
+  await updateDoc(docRef, {
+    birthdayList: arrayUnion({
+      id: nanoid(),
+      text,
+      addedAt: new Date(),
+      obtained: false,
+    })
   });
-
-  await saveCircle(circle);
-  return circle;
 }
 
-// Remove birthday list item
-export async function removeBirthdayItem(circleId: string, itemId: string): Promise<CircleInstance | null> {
-  const circle = await getCircleById(circleId);
-  if (!circle) return null;
-
-  circle.birthdayList = circle.birthdayList.filter(item => item.id !== itemId);
-
-  await saveCircle(circle);
-  return circle;
+// Remove birthday list item (atomic with transaction)
+export async function removeBirthdayItem(circleId: string, itemId: string): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, circleId);
+  await runTransaction(db, async (transaction) => {
+    const docSnap = await transaction.get(docRef);
+    if (!docSnap.exists()) {
+      throw new Error('Circle not found');
+    }
+    const data = docSnap.data();
+    const itemToRemove = data.birthdayList?.find((item: any) => item.id === itemId);
+    if (itemToRemove) {
+      transaction.update(docRef, {
+        birthdayList: arrayRemove(itemToRemove)
+      });
+    }
+  });
 }
 
-// Toggle birthday item obtained status
-export async function toggleBirthdayItem(circleId: string, itemId: string): Promise<CircleInstance | null> {
-  const circle = await getCircleById(circleId);
-  if (!circle) return null;
-
-  const item = circle.birthdayList.find(i => i.id === itemId);
-  if (item) {
-    item.obtained = !item.obtained;
-  }
-
-  await saveCircle(circle);
-  return circle;
+// Toggle birthday item obtained status (atomic with transaction)
+export async function toggleBirthdayItem(circleId: string, itemId: string): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, circleId);
+  await runTransaction(db, async (transaction) => {
+    const docSnap = await transaction.get(docRef);
+    if (!docSnap.exists()) {
+      throw new Error('Circle not found');
+    }
+    const data = docSnap.data();
+    const updatedList = data.birthdayList.map((item: any) =>
+      item.id === itemId ? { ...item, obtained: !item.obtained } : item
+    );
+    transaction.update(docRef, { birthdayList: updatedList });
+  });
 }
 
-// Add a new letter
+// Add a new letter (atomic)
 export async function addLetter(
   circleId: string,
   author: 'julian' | 'mahnoor',
   content: string,
   title?: string
-): Promise<CircleInstance | null> {
-  const circle = await getCircleById(circleId);
-  if (!circle) return null;
-
+): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, circleId);
   const newLetter: LetterEntry = {
     id: nanoid(),
     author,
@@ -267,52 +282,56 @@ export async function addLetter(
     createdAt: new Date(),
     title,
   };
-
-  circle.letters.unshift(newLetter);
-
-  await saveCircle(circle);
-  return circle;
-}
-
-// Add condition
-export async function addCondition(circleId: string, text: string): Promise<CircleInstance | null> {
-  const circle = await getCircleById(circleId);
-  if (!circle) return null;
-
-  circle.conditions.push({
-    id: nanoid(),
-    text,
-    addedAt: new Date(),
-    completed: false,
+  await updateDoc(docRef, {
+    letters: arrayUnion(newLetter)
   });
-
-  await saveCircle(circle);
-  return circle;
 }
 
-// Remove condition
-export async function removeCondition(circleId: string, conditionId: string): Promise<CircleInstance | null> {
-  const circle = await getCircleById(circleId);
-  if (!circle) return null;
-
-  circle.conditions = circle.conditions.filter(c => c.id !== conditionId);
-
-  await saveCircle(circle);
-  return circle;
+// Add condition (atomic)
+export async function addCondition(circleId: string, text: string): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, circleId);
+  await updateDoc(docRef, {
+    conditions: arrayUnion({
+      id: nanoid(),
+      text,
+      addedAt: new Date(),
+      completed: false,
+    })
+  });
 }
 
-// Toggle condition completed status
-export async function toggleCondition(circleId: string, conditionId: string): Promise<CircleInstance | null> {
-  const circle = await getCircleById(circleId);
-  if (!circle) return null;
+// Remove condition (atomic with transaction)
+export async function removeCondition(circleId: string, conditionId: string): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, circleId);
+  await runTransaction(db, async (transaction) => {
+    const docSnap = await transaction.get(docRef);
+    if (!docSnap.exists()) {
+      throw new Error('Circle not found');
+    }
+    const data = docSnap.data();
+    const conditionToRemove = data.conditions?.find((c: any) => c.id === conditionId);
+    if (conditionToRemove) {
+      transaction.update(docRef, {
+        conditions: arrayRemove(conditionToRemove)
+      });
+    }
+  });
+}
 
-  const condition = circle.conditions.find(c => c.id === conditionId);
-  if (condition) {
-    condition.completed = !condition.completed;
-  }
-
-  await saveCircle(circle);
-  return circle;
+// Toggle condition completed status (atomic with transaction)
+export async function toggleCondition(circleId: string, conditionId: string): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, circleId);
+  await runTransaction(db, async (transaction) => {
+    const docSnap = await transaction.get(docRef);
+    if (!docSnap.exists()) {
+      throw new Error('Circle not found');
+    }
+    const data = docSnap.data();
+    const updatedConditions = data.conditions.map((c: any) =>
+      c.id === conditionId ? { ...c, completed: !c.completed } : c
+    );
+    transaction.update(docRef, { conditions: updatedConditions });
+  });
 }
 
 // Get share URLs

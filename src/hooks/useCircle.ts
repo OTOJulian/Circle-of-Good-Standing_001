@@ -73,42 +73,74 @@ export function useSharedCircle(): UseSharedCircleResult {
 
   const updateMarkerPosition = useCallback(async (x: number, y: number, note?: string) => {
     if (!circle) return;
-    await updatePosition(circle.id, x, y, note);
+    try {
+      await updatePosition(circle.id, x, y, note);
+    } catch (err) {
+      console.error('Failed to update position:', err);
+    }
   }, [circle]);
 
   const addItem = useCallback(async (text: string) => {
     if (!circle) return;
-    await addBirthdayItem(circle.id, text);
+    try {
+      await addBirthdayItem(circle.id, text);
+    } catch (err) {
+      console.error('Failed to add item:', err);
+    }
   }, [circle]);
 
   const removeItem = useCallback(async (itemId: string) => {
     if (!circle) return;
-    await removeBirthdayItem(circle.id, itemId);
+    try {
+      await removeBirthdayItem(circle.id, itemId);
+    } catch (err) {
+      console.error('Failed to remove item:', err);
+    }
   }, [circle]);
 
   const toggleItem = useCallback(async (itemId: string) => {
     if (!circle) return;
-    await toggleBirthdayItem(circle.id, itemId);
+    try {
+      await toggleBirthdayItem(circle.id, itemId);
+    } catch (err) {
+      console.error('Failed to toggle item:', err);
+    }
   }, [circle]);
 
   const addNewLetter = useCallback(async (author: 'julian' | 'mahnoor', content: string, title?: string) => {
     if (!circle) return;
-    await addLetter(circle.id, author, content, title);
+    try {
+      await addLetter(circle.id, author, content, title);
+    } catch (err) {
+      console.error('Failed to add letter:', err);
+    }
   }, [circle]);
 
   const addConditionItem = useCallback(async (text: string) => {
     if (!circle) return;
-    await addCondition(circle.id, text);
+    try {
+      await addCondition(circle.id, text);
+    } catch (err) {
+      console.error('Failed to add condition:', err);
+    }
   }, [circle]);
 
   const removeConditionItem = useCallback(async (conditionId: string) => {
     if (!circle) return;
-    await removeCondition(circle.id, conditionId);
+    try {
+      await removeCondition(circle.id, conditionId);
+    } catch (err) {
+      console.error('Failed to remove condition:', err);
+    }
   }, [circle]);
 
   const toggleConditionItem = useCallback(async (conditionId: string) => {
     if (!circle) return;
-    await toggleCondition(circle.id, conditionId);
+    try {
+      await toggleCondition(circle.id, conditionId);
+    } catch (err) {
+      console.error('Failed to toggle condition:', err);
+    }
   }, [circle]);
 
   return {
