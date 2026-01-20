@@ -1,5 +1,54 @@
 # Circle of Good Standing - Development Progress
 
+## Session: January 19, 2026
+
+### Playlist Personal Explanations (Completed)
+- **Added personal text/explanations** to each song in the playlist
+- **Source**: User provided copy in `test_assets/Playlist Copy.txt`
+- **Intro text**: Shows in explanation panel when no song is hovered
+  - "You asked me, 'What's the full Mahnoor experience?'..."
+
+### Playlist Song Changes (Completed)
+- **Added 3 new songs**:
+  - SkeeYee - Sexyy Red
+  - Come Back to Earth - Mac Miller
+  - Present Tense - Radiohead
+- **Removed 5 songs**:
+  - Si tu vois ma mère - The London Film Score Orchestra
+  - I Fall In Love Too Easily - Chet Baker
+  - On A Clear Day (You Can See Forever) - Bill Evans
+  - I Only Have Eyes for You - The Flamingos
+  - Regrets - JAY-Z
+- **Reordered** playlist to 25 songs matching user's sequence
+
+### Spelling Corrections Applied
+- everytime → every time, revsist → revisit, turn of → turn off
+- Olso → Oslo, wether → whether, offly → awfully, eifel → Eiffel
+- interraction → interaction, thigns → things, regret's → regrets
+- Defenitions → Definitions, you head → your head
+
+### Long Explanation Pagination (Completed)
+- **Problem**: "Present Tense" explanation was too long and broke the layout
+- **Solution**: Added page splitting for long explanations
+  - `splitExplanationIntoPages()` function splits at ~500 chars
+  - Breaks at sentence boundaries (., !, ?)
+  - Navigation arrows (← →) and page indicator appear when needed
+
+### Sticky Hover Behavior (Completed)
+- **Problem**: Explanation reset to intro immediately when mouse left a song
+- **Solution**: Explanation now "sticks" on last hovered song
+  - Hover new song → shows that song's explanation
+  - Move mouse away → stays on current song (allows page navigation)
+  - Hover playlist header → returns to intro
+
+### Files Modified This Session
+- `src/components/decorations/Phone.tsx` - Complete playlist overhaul with explanations, pagination, sticky hover
+
+### Git
+- Commit: `576b043` - Add personal explanations to playlist songs
+
+---
+
 ## Session: January 18, 2026 (Continued)
 
 ### Letter Page Splitting Fix (Completed)
@@ -92,7 +141,7 @@
 
 ### Decorations
 - **Epok Popup**: Shows epok_cap and epok_bin side by side, click-drag to spawn snus pouches
-- **Phone Popup**: Spotify playlist viewer with 27 songs, album art, 30-second previews, hover explanations
+- **Phone Popup**: Spotify playlist viewer with 25 songs, album art, 30-second previews, hover explanations with personal stories
 - **Ice Cream & Fries**: Click-drag fries to dip in ice cream
 
 ### Tech Stack
@@ -105,7 +154,7 @@
 ---
 
 ## Known Issues / Future Work
-- **Spotify Preview URLs**: Some have expired - songs 1, 2, 5 and possibly others show Spotify icon and open Spotify instead of playing inline. To fix permanently, would need to fetch fresh preview URLs from Spotify API.
+- **Spotify Preview URLs**: New songs (SkeeYee, Come Back to Earth, Present Tense) don't have preview URLs and will open Spotify directly. Some older previews may also have expired. To fix permanently, would need to fetch fresh preview URLs from Spotify API.
 
 ## Notes
 - Edit mode = Mahnoor's link (can edit coaster position, birthday list, conditions)
